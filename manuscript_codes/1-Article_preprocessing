@@ -57,7 +57,7 @@ unique(all.uniq$Type)
 #Filter entries
 all.filt_type <- all.uniq[all.uniq$Type %in% c("Article","Letter","Article in Press","Note","Short Survey","Reprint"),]
 
-write.csv(all.filt_type, "data/all_010623.csv", row.names=FALSE)
+write.csv(all.filt_type, "data/all_20230601.csv", row.names=FALSE)
 
 ##############
 # 4- GET STATS
@@ -69,3 +69,14 @@ nrow(all)
 nrow(all.uniq)
 #After manuscript type filtering
 nrow(all.filt_type)
+
+##############
+# 5-RANDOM ANALYSIS OF THE ARTICLES
+##############
+all <- read.csv("data/all_2023060.csv") #get file with all the papers
+
+all.random <- all[sample(1:nrow(all),200),] #select 200 random papers
+write.csv(all.random,"data/all_2023060_random200.csv",row.names=FALSE)
+
+
+
