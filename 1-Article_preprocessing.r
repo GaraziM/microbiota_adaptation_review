@@ -7,8 +7,8 @@ setwd("/Users/GaraziM/github/microbiota_adaptation_review/")
 ##############
 
 #Load raw data tables
-scp_raw <- read.csv("data/Scopus_22.11.22.csv")
-wos_raw <- read.csv("data/WOS_22.11.22.csv")
+scp_raw <- read.csv("data/Scopus_01.06.23.csv")
+wos_raw <- read.csv("data/WOS_01.06.23.csv")
 
 #Filter columns
 scp <- scp_raw[,c("Title","Authors","Year","Document.Type","DOI","Abstract","Author.Keywords","Index.Keywords")]
@@ -57,7 +57,7 @@ unique(all.uniq$Type)
 #Filter entries
 all.filt_type <- all.uniq[all.uniq$Type %in% c("Article","Letter","Article in Press","Note","Short Survey","Reprint"),]
 
-write.csv(all.filt_type, "data/all_20221122.csv", row.names=FALSE)
+write.csv(all.filt_type, "data/all_010623.csv", row.names=FALSE)
 
 ##############
 # 4- GET STATS
@@ -69,8 +69,6 @@ nrow(all)
 nrow(all.uniq)
 #After manuscript type filtering
 nrow(all.filt_type)
-
-
 
 
 ##############
