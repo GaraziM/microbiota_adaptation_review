@@ -1,7 +1,7 @@
 ---
 title: "Adaptation_review"
 author: "Garazi Martin Bideguren"
-date: "2023-09-13"
+date: "2023-09-16"
 output: 
   html_document:
     theme: simplex
@@ -301,6 +301,10 @@ data_proportional %>%
   theme_classic()
 ```
 
+```{r linear_model_scatterplot_reproducibility, echo=TRUE}
+linear_model <- lm(Total_reproducibility ~ Year, data = data_proportional)
+summary(linear_model)
+```
 
 ### Methodological resolution
 ```{r methodology, echo=TRUE}
@@ -333,6 +337,12 @@ data_proportional %>%
   theme_classic()
 ```
 
+```{r linear_model_scatterplot_methodology, echo=TRUE}
+linear_model <- lm(Total_methodology ~ Year, data = data_proportional)
+summary(linear_model)
+```
+
+
 ### Experimental design
 ```{r experimental_design, echo=TRUE}
 data_proportional$Year<-as.character(data_proportional$Year)
@@ -362,6 +372,11 @@ data_proportional %>%
   geom_point() +
   geom_smooth(method=lm) +
   theme_classic()
+```
+
+```{r linear_model_scatterplot_experimental_design, echo=TRUE}
+linear_model <- lm(Total_experimental_design ~ Year, data = data_proportional)
+summary(linear_model)
 ```
 
 ### Microbiota-host analysis
