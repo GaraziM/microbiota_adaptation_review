@@ -1,7 +1,7 @@
 ---
 title: "Adaptation_review"
 author: "Garazi Martin Bideguren"
-date: "2023-09-16"
+date: "2023-09-27"
 output: 
   html_document:
     theme: simplex
@@ -71,9 +71,33 @@ data_proportional <- data_proportional %>%
   mutate(total = rowSums(across(all_of(metrics))) / sum(weight_vector))
 ```
 
+## Rarefaction analysis
+Rarefaction analysis was made with 50, 60 and 100 papers to evaluate the sampling effort
+```{r rarefaction_curve, scho=TRUE}
+data_vector <- data$Total
+num_iterations <- 30
+
+rarefaction_df <- tibble(rarefaction_level = seq(1, length(data_vector), by = 1)) %>%
+  mutate(values = map(rarefaction_level, ~ replicate(num_iterations, {
+    sampled_values <- sample(data_vector, .x)
+    mean(sampled_values)
+  }))) %>%
+  mutate(mean_value = map_dbl(values, ~ mean(.x)),
+         sd_value = map_dbl(values, ~ sd(.x)),
+     se_value = sd_value / sqrt(num_iterations)) %>%
+  mutate(threshold=ifelse(se_value < 0.001, "Low", "High"))
+
+ggplot(rarefaction_df, aes(x = rarefaction_level, y = mean_value, color= threshold)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean_value - sd_value, ymax = mean_value + sd_value), width = 0.2) +
+  labs(x = "Rarefaction Level", y = "Average Rarefied Mean Value") +
+  theme_minimal()
+```
+
 ## Data visualization
 ### Summary statistics
 #### Total scores distribution
+Distribution of total scores of the 100 papers analysed
 ```{r histogram_score, echo=TRUE}
 data_proportional %>%
   ggplot(aes(x=Total)) +
@@ -82,6 +106,7 @@ data_proportional %>%
 ```
 
 #### Papers analysed per year
+The 100 papers analysed distributed per year
 ```{r histogram_year, echo=TRUE}
 data_proportional %>%
   ggplot(aes(x=Year)) +
@@ -114,6 +139,8 @@ data_proportional %>%
 #### Total scores distribution in each animal class
 ```{r boxplot_class, echo=TRUE, warning=FALSE}
 data_proportional$Year<-as.character(data_proportional$Year)
+data_proportional$Class <- str_replace(data_proportional$Class, "Dipnoi", "Fish")
+data_proportional$Class <- str_replace(data_proportional$Class, "Actinopterygii", "Fish")
 data_proportional %>%
   separate_rows(Class, sep = ", ") %>%
   ggplot(aes(x = Class, y = Total, fill = Class)) +
@@ -124,8 +151,8 @@ data_proportional %>%
     height = 0,
     alpha = 0.5,
     size = 1.5) +
-  scale_fill_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA")) +
-  scale_colour_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA"))+
+  scale_fill_manual(values = c("#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677")) +
+  scale_colour_manual(values = c("#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677"))+
   theme_classic() +
   labs(title = "Total Score Distributions by Animal Class",
        y = "Total Score",
@@ -158,6 +185,7 @@ data_proportional %>%
 ```
 
 #### Total scores trend
+Total scores trend fitted by a linear model 
 ```{r scatterplot_year, echo=TRUE}
 data_proportional$Year<-as.integer(data_proportional$Year)
 data_proportional %>%
@@ -169,6 +197,90 @@ data_proportional %>%
 ```{r linear_model_scatterplot_year, echo=TRUE}
 linear_model <- lm(Total ~ Year, data = data_proportional)
 summary(linear_model)
+```
+
+
+### Total scores of each of the 100 papers divided by the 3 domains
+```{r stack_barplot, echo=TRUE}
+data_long <- data_proportional %>%
+  select(Paper_ID, Year, Reproducibility_stackbarplot, Experimental_stackbarplot, Methodology_stackbarplot) %>%
+  pivot_longer(cols = c(Reproducibility_stackbarplot, Experimental_stackbarplot, Methodology_stackbarplot), 
+               names_to = "Category", values_to = "Score")
+data_long <- data_long %>%
+  arrange(Year) %>%
+  mutate(Paper_ID = factor(Paper_ID, levels = unique(Paper_ID)))  # Reorder and group by year
+
+
+ggplot(data_long, aes(x = Paper_ID, y = Score, fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total scores",
+       x = "Paper ID",
+       y = "Score") +
+  theme_minimal() +
+  facet_grid(~ Year, scales = "free", space = "free")+
+  theme(axis.text.x = element_blank(),axis.ticks.x=element_blank())+
+  scale_fill_discrete(name = "Domain", labels = c("Experimental design", "Methodological resolution", "Reproducibility"))
+```
+
+## Criterion scores visualization
+
+#### Experimental approach scores distribution per year
+```{r experiment_year, echo=TRUE}
+data_proportional$Year<-as.character(data_proportional$Year)
+data_proportional %>%
+  separate_rows(Year, sep = ", ") %>%
+  ggplot(aes(x = Year, y = Total_experimental_design_approach, fill = Year)) +
+  geom_violin() +
+  geom_point(stat = "summary", fun = "median", shape = 8, color = "black", size = 3) +
+  geom_jitter(
+    width = 0.15,
+    height = 0,
+    alpha = 0.5,
+    size = 1.5) +
+  scale_fill_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
+  scale_colour_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
+  theme_classic() +
+  labs(title = "Experimental approach scores distribution per year",
+       y = "Experimental approach scores",
+       x = "Year") +
+  coord_flip()
+
+```
+
+#### Experiment approach scores trend
+```{r experiment_year_trend, echo=TRUE}
+data_proportional$Year<-as.integer(data_proportional$Year)
+data_proportional %>%
+  ggplot(aes(x=Year,y=Total_experimental_design_approach)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  theme_classic()
+```
+
+### Conclusiveness scores distribution
+
+```{r adaptation_means, echo=TRUE}
+adaptation_hyp<-data_proportional %>%
+  select(Paper_ID,Year, Adaptation_means,Adaptation_discussion)
+
+ggplot(adaptation_hyp, aes(x = Adaptation_means, fill = Adaptation_discussion)) +
+  geom_bar() +
+  labs(title = "Adaptation as hypothesis",
+       x = "How has been tested",
+       y = "Nº of papers") +
+  theme_minimal() +
+  scale_x_discrete(name ="Aim of the study", labels=c("Descriptive comparison" = "Doesn't test adaptation", "Comparison under host biological process" = "To test adaptation")) +
+  theme(axis.text.x = element_text(angle=90))
+```
+
+### Conclusiveness scores against total scores obtained
+
+```{r adaptation_means_scores, echo=TRUE}
+data_proportional %>%
+  ggplot(aes(x=Adaptation_discussion_score,y=Total)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  theme_classic()
 ```
 
 
@@ -199,6 +311,37 @@ data_proportional %>%
 data_proportional$Year<-as.integer(data_proportional$Year)
 data_proportional %>%
   ggplot(aes(x=Year,y=Total_fitness_measurement)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  theme_classic()
+```
+
+### Microbiota-host analysis
+```{r analysis, echo=TRUE}
+data_proportional$Year<-as.character(data_proportional$Year)
+data_proportional %>%
+  separate_rows(Year, sep = ", ") %>%
+  ggplot(aes(x = Year, y = Total_microbita_host_analysis, fill = Year)) +
+  geom_violin() +
+  geom_point(stat = "summary", fun = "median", shape = 8, color = "black", size = 3) +
+  geom_jitter(
+    width = 0.15,
+    height = 0,
+    alpha = 0.5,
+    size = 1.5) +
+  scale_fill_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
+  scale_colour_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
+  theme_classic() +
+  labs(title = "Microbiota-host analysis",
+       y = "Total_microbita_host_analysis",
+       x = "Year") +
+  coord_flip()
+```
+
+```{r analysis_trend, echo=TRUE}
+data_proportional$Year<-as.integer(data_proportional$Year)
+data_proportional %>%
+  ggplot(aes(x=Year,y=Total_microbita_host_analysis)) +
   geom_point() +
   geom_smooth(method=lm) +
   theme_classic()
@@ -236,12 +379,13 @@ data_proportional %>%
   theme_classic()
 ```
 
-#### Experimental approach scores distribution per year
-```{r experiment_year, echo=TRUE}
+## 3 Domain scores visualization
+### Experimental design
+```{r experimental_design, echo=TRUE}
 data_proportional$Year<-as.character(data_proportional$Year)
 data_proportional %>%
   separate_rows(Year, sep = ", ") %>%
-  ggplot(aes(x = Year, y = Total_experimental_design_approach, fill = Year)) +
+  ggplot(aes(x = Year, y = Total_experimental_design, fill = Year)) +
   geom_violin() +
   geom_point(stat = "summary", fun = "median", shape = 8, color = "black", size = 3) +
   geom_jitter(
@@ -252,59 +396,28 @@ data_proportional %>%
   scale_fill_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
   scale_colour_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
   theme_classic() +
-  labs(title = "Experimental approach scores distribution per year",
-       y = "Experimental approach scores",
+  labs(title = "Experimental design",
+       y = "Total_experimental_design",
        x = "Year") +
   coord_flip()
-
 ```
 
-#### Experiment approach scores trend
-```{r experiment_year_trend, echo=TRUE}
+```{r experimental_design_trend, echo=TRUE}
 data_proportional$Year<-as.integer(data_proportional$Year)
 data_proportional %>%
-  ggplot(aes(x=Year,y=Total_experimental_design_approach)) +
+  ggplot(aes(x=Year,y=Total_experimental_design)) +
   geom_point() +
   geom_smooth(method=lm) +
   theme_classic()
 ```
 
-#### Reproducibility scores distribution per year
-```{r reproducibility_year, echo=TRUE}
-data_proportional$Year<-as.character(data_proportional$Year)
-data_proportional %>%
-  separate_rows(Year, sep = ", ") %>%
-  ggplot(aes(x = Year, y = Total_reproducibility, fill = Year)) +
-  geom_violin() +
-  geom_point(stat = "summary", fun = "median", shape = 8, color = "black", size = 3) +
-  geom_jitter(
-    width = 0.15,
-    height = 0,
-    alpha = 0.5,
-    size = 1.5) +
-  scale_fill_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
-  scale_colour_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
-  theme_classic() +
-  labs(title = "Reproducibility scores distribution per year",
-       y = "Reproducibility scores",
-       x = "Year") +
-  coord_flip()
-```
-
-#### Reproducibility scores trend
-```{r reproducibility_year_trend, echo=TRUE}
-data_proportional$Year<-as.integer(data_proportional$Year)
-data_proportional %>%
-  ggplot(aes(x=Year,y=Total_reproducibility)) +
-  geom_point() +
-  geom_smooth(method=lm) +
-  theme_classic()
-```
-
-```{r linear_model_scatterplot_reproducibility, echo=TRUE}
-linear_model <- lm(Total_reproducibility ~ Year, data = data_proportional)
+```{r linear_model_scatterplot_experimental_design, echo=TRUE}
+linear_model <- lm(Total_experimental_design ~ Year, data = data_proportional)
 summary(linear_model)
 ```
+
+
+
 
 ### Methodological resolution
 ```{r methodology, echo=TRUE}
@@ -343,12 +456,12 @@ summary(linear_model)
 ```
 
 
-### Experimental design
-```{r experimental_design, echo=TRUE}
+#### Data availability scores distribution per year
+```{r reproducibility_year, echo=TRUE}
 data_proportional$Year<-as.character(data_proportional$Year)
 data_proportional %>%
   separate_rows(Year, sep = ", ") %>%
-  ggplot(aes(x = Year, y = Total_experimental_design, fill = Year)) +
+  ggplot(aes(x = Year, y = Total_reproducibility, fill = Year)) +
   geom_violin() +
   geom_point(stat = "summary", fun = "median", shape = 8, color = "black", size = 3) +
   geom_jitter(
@@ -359,53 +472,24 @@ data_proportional %>%
   scale_fill_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
   scale_colour_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
   theme_classic() +
-  labs(title = "Experimental design",
-       y = "Total_experimental_design",
+  labs(title = "Reproducibility scores distribution per year",
+       y = "Reproducibility scores",
        x = "Year") +
   coord_flip()
 ```
 
-```{r experimental_design_trend, echo=TRUE}
+#### Data availability scores trend
+```{r reproducibility_year_trend, echo=TRUE}
 data_proportional$Year<-as.integer(data_proportional$Year)
 data_proportional %>%
-  ggplot(aes(x=Year,y=Total_experimental_design)) +
+  ggplot(aes(x=Year,y=Total_reproducibility)) +
   geom_point() +
   geom_smooth(method=lm) +
   theme_classic()
 ```
 
-```{r linear_model_scatterplot_experimental_design, echo=TRUE}
-linear_model <- lm(Total_experimental_design ~ Year, data = data_proportional)
+```{r linear_model_scatterplot_reproducibility, echo=TRUE}
+linear_model <- lm(Total_reproducibility ~ Year, data = data_proportional)
 summary(linear_model)
 ```
 
-### Microbiota-host analysis
-```{r analysis, echo=TRUE}
-data_proportional$Year<-as.character(data_proportional$Year)
-data_proportional %>%
-  separate_rows(Year, sep = ", ") %>%
-  ggplot(aes(x = Year, y = Total_microbita_host_analysis, fill = Year)) +
-  geom_violin() +
-  geom_point(stat = "summary", fun = "median", shape = 8, color = "black", size = 3) +
-  geom_jitter(
-    width = 0.15,
-    height = 0,
-    alpha = 0.5,
-    size = 1.5) +
-  scale_fill_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
-  scale_colour_manual(values = c("#E69F00", "#AA3377", "#228833", "#66CCEE", "#CCBB44", "#EE6677", "#4477AA", "#125A56")) +
-  theme_classic() +
-  labs(title = "Microbiota-host analysis",
-       y = "Total_microbita_host_analysis",
-       x = "Year") +
-  coord_flip()
-```
-
-```{r analysis_trend, echo=TRUE}
-data_proportional$Year<-as.integer(data_proportional$Year)
-data_proportional %>%
-  ggplot(aes(x=Year,y=Total_microbita_host_analysis)) +
-  geom_point() +
-  geom_smooth(method=lm) +
-  theme_classic()
-```
