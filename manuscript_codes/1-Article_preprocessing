@@ -73,10 +73,10 @@ nrow(all.filt_type)
 ##############
 # 5-RANDOM ANALYSIS OF THE ARTICLES
 ##############
-all <- read.csv("data/all_2023060.csv") #get file with all the papers
+all <- read.csv("data/all_20230601.csv") #get file with all the papers
 
 all.random <- all[sample(1:nrow(all),200),] #select 200 random papers
-write.csv(all.random,"data/all_2023060_random200.csv",row.names=FALSE)
+write.csv(all.random,"data/all_20230601_random200.csv",row.names=FALSE)
 
 
 
