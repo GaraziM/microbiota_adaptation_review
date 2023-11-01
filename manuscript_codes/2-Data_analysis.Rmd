@@ -1,15 +1,10 @@
 ---
 title: "Microbiota adaptation review - 2. Analysis"
 author: "Garazi Martin Bideguren"
-date: "01/11/2023"
+date: "01-11-2023"
 output: 
-  html_document:
-    theme: simplex
-    toc: yes
-    toc_float:
-      collapsed: false
-    fig_width: 7 
-    fig_height: 4
+  pdf_document:
+    toc: true
 ---
 
 
@@ -71,33 +66,10 @@ data_proportional <- data_proportional %>%
   mutate(total = rowSums(across(all_of(metrics))) / sum(weight_vector))
 ```
 
-## Rarefaction analysis
-Rarefaction analysis was made with 50, 60 and 100 papers to evaluate the sampling effort
-```{r rarefaction_curve, scho=TRUE}
-data_vector <- data$Total
-num_iterations <- 30
-
-rarefaction_df <- tibble(rarefaction_level = seq(1, length(data_vector), by = 1)) %>%
-  mutate(values = map(rarefaction_level, ~ replicate(num_iterations, {
-    sampled_values <- sample(data_vector, .x)
-    mean(sampled_values)
-  }))) %>%
-  mutate(mean_value = map_dbl(values, ~ mean(.x)),
-         sd_value = map_dbl(values, ~ sd(.x)),
-     se_value = sd_value / sqrt(num_iterations)) %>%
-  mutate(threshold=ifelse(se_value < 0.001, "Low", "High"))
-
-ggplot(rarefaction_df, aes(x = rarefaction_level, y = mean_value, color= threshold)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = mean_value - sd_value, ymax = mean_value + sd_value), width = 0.2) +
-  labs(x = "Rarefaction Level", y = "Average Rarefied Mean Value") +
-  theme_minimal()
-```
-
 ## Data visualization
 ### Summary statistics
 #### Total scores distribution
-Distribution of total scores of the 100 papers analysed
+Distribution of total scores of the 109 papers analysed
 ```{r histogram_score, echo=TRUE}
 data_proportional %>%
   ggplot(aes(x=Total)) +
@@ -106,7 +78,7 @@ data_proportional %>%
 ```
 
 #### Papers analysed per year
-The 100 papers analysed distributed per year
+The 109 papers analysed distributed per year
 ```{r histogram_year, echo=TRUE}
 data_proportional %>%
   ggplot(aes(x=Year)) +
@@ -181,7 +153,6 @@ data_proportional %>%
        y = "Total Score",
        x = "Year") +
   coord_flip()
-
 ```
 
 #### Total scores trend
@@ -200,7 +171,7 @@ summary(linear_model)
 ```
 
 
-### Total scores of each of the 100 papers divided by the 3 domains
+### Total scores of each of the 109 papers divided by the 3 domains
 ```{r stack_barplot, echo=TRUE}
 data_long <- data_proportional %>%
   select(Paper_ID, Year, Reproducibility_stackbarplot, Experimental_stackbarplot, Methodology_stackbarplot) %>%
@@ -244,7 +215,6 @@ data_proportional %>%
        y = "Experimental approach scores",
        x = "Year") +
   coord_flip()
-
 ```
 
 #### Experiment approach scores trend
@@ -257,31 +227,6 @@ data_proportional %>%
   theme_classic()
 ```
 
-### Conclusiveness scores distribution
-
-```{r adaptation_means, echo=TRUE}
-adaptation_hyp<-data_proportional %>%
-  select(Paper_ID,Year, Adaptation_means,Adaptation_discussion)
-
-ggplot(adaptation_hyp, aes(x = Adaptation_means, fill = Adaptation_discussion)) +
-  geom_bar() +
-  labs(title = "Adaptation as hypothesis",
-       x = "How has been tested",
-       y = "Nº of papers") +
-  theme_minimal() +
-  scale_x_discrete(name ="Aim of the study", labels=c("Descriptive comparison" = "Doesn't test adaptation", "Comparison under host biological process" = "To test adaptation")) +
-  theme(axis.text.x = element_text(angle=90))
-```
-
-### Conclusiveness scores against total scores obtained
-
-```{r adaptation_means_scores, echo=TRUE}
-data_proportional %>%
-  ggplot(aes(x=Adaptation_discussion_score,y=Total)) +
-  geom_point() +
-  geom_smooth(method=lm) +
-  theme_classic()
-```
 
 
 #### Fitness measurement scores distribution per year
@@ -378,6 +323,35 @@ data_proportional %>%
   geom_smooth(method=lm) +
   theme_classic()
 ```
+
+
+### Conclusiveness scores distribution
+
+```{r adaptation_means, echo=TRUE}
+adaptation_hyp<-data_proportional %>%
+  select(Paper_ID,Year, Adaptation_means,Adaptation_discussion)
+
+ggplot(adaptation_hyp, aes(x = Adaptation_means, fill = Adaptation_discussion)) +
+  geom_bar() +
+  labs(title = "Adaptation as hypothesis",
+       x = "How has been tested",
+       y = "Nº of papers") +
+  theme_minimal() +
+  scale_x_discrete(name ="Aim of the study", labels=c("Descriptive comparison" = "Doesn't test adaptation", "Comparison under host biological process" = "To test adaptation")) +
+  theme(axis.text.x = element_text(angle=90))
+```
+
+### Conclusiveness scores against total scores obtained
+
+```{r adaptation_means_scores, echo=TRUE}
+data_proportional %>%
+  ggplot(aes(x=Adaptation_discussion_score,y=Total)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  theme_classic()
+```
+
+
 
 ## 3 Domain scores visualization
 ### Experimental design
