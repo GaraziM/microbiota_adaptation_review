@@ -2,7 +2,7 @@
 title: "Microbiota adaptation review - 1. Preprocessing"
 author: "Garazi Martin Bideguren"
 date: "01/11/2023"
-output: html_document
+output: pdf
 ---
 
 ```{r setup, include=FALSE}
